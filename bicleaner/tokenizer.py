@@ -7,34 +7,34 @@ try:
 except (SystemError, ImportError):
     from util import  no_escaping
 
+import jieba
+import mecab
+
 
 class Tokenizer:
     def __init__(self, command=None,  l="en"):
-        if command:
-            self.tokenizer=ToolWrapper(command.split(' '))
-            self.external =  True
-            self.spm = command.find('spm_encode') > -1
+        self.l = l
+        if self.l == "en":
+            self.tokenizer = MosesTokenizer(lang=self.l)
+        elif self.l == "zh":
+            self.tokenizer = jieba.dt
+        elif self.l == "ko":
+            self.tokenizer = mecab.MeCab()
         else:
-            self.tokenizer = MosesTokenizer(lang=l)
-            self.external = False
-            self.spm = False
+            raise RuntimeError("language code is either zh or en or ko") 
 
     def tokenize(self, text):
-        if self.external:
-            self.tokenizer.writeline(text.rstrip('\n'))
-            return ([no_escaping(t) for t in self.tokenizer.readline().rstrip('\n').split()])
-        else:
+        if self.l == 'en':
             return self.tokenizer.tokenize(text, escape=False)
+        elif self.l == 'zh':
+            return list(self.tokenizer.cut(text))
+        elif self.l == 'ko':
+            return self.tokenizer.morphs(text)
+        else:
+            raise RuntimeError("language code is either zh or en or ko") 
 
     def detokenize(self, text):
-        if self.spm:
-            return ''.join(text).replace('\u2581',' ')
-        else:
-            return ' '.join(text)
+        return ' '.join(text)
 
     def close(self):
-        if self.external:
-            try:
-                self.tokenizer.close()
-            except:
-                return
+        pass
